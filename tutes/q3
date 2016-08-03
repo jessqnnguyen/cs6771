@@ -1,0 +1,12 @@
+Extension
+=========================================================
+Explain why if we change the first function prototype to:
+void order3(int *const a, int *const b, int *const c)
+The code still compiles and works as expected, but the following two function prototypes don't compile:
+void order3(const int *a, const int *b, const int *c) - this is pointer to const int which can't be modified so it doesn't compile
+since we can modify the pointer but we can't modify the int value
+void order3(const unsigned int &a, const unsigned int &b, const unsigned int &c) -
+same thing but with references, it's a reference to a const unsigned int/
+Place the two order3 functions into a different cpp file from your main function.
+Create a header file for the two order3 functions that you will include in the main cpp file.
+Compile the code through a makefile that sperately compiles and links the various cpp and h files.
