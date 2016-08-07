@@ -20,7 +20,7 @@ class Node {
 
 vector<string> getAllValidChildWords(string word, string destWord);
 void pushChildWordsToQueue(vector<string> wl, string destWord,
-													 std::set<string> visitedWords, queue<Node> &q);
+													 std::set<string> *visitedWords, queue<Node> &q);
 
 Node::Node (vector<string> wl) {
 	words = wl;
@@ -42,7 +42,7 @@ int main() {
 	queue<Node> q;
 	vector<string> startWordLadder{startWord};
 	Node n(startWordLadder);
-  pushChildWordsToQueue(startWordLadder, destWord,  visitedWords, q);
+  pushChildWordsToQueue(startWordLadder, destWord,  &visitedWords, q);
 
 	// Store optimal nodes that have reached the destination word in their
 	// word ladder and length of shortest path word ladders.
@@ -55,7 +55,7 @@ int main() {
 		n = q.front();
 		q.pop();
 
-		// Early exit.
+		// Early exit
 		if (!optimalNodes.empty() && n.words.size() > shortestPathLength) {
 			break;
 		} else {
@@ -67,7 +67,7 @@ int main() {
 			}
 			// Get all child nodes to current node, that is all nodes which continue
 			// the word ladder.
-			pushChildWordsToQueue(n.words, destWord, visitedWords, q);
+			pushChildWordsToQueue(n.words, destWord, &visitedWords, q);
 		}
 	}
   std::cout << "queue size: " << q.size() << std::endl;
@@ -88,21 +88,29 @@ int main() {
 }
 
 void pushChildWordsToQueue(vector<string> wordLadder, string destWord,
-													 std::set<string> visitedWords, queue<Node> &q) {
+													 std::set<string> *visitedWords, queue<Node> &q) {
   vector<string> currWordLadder = wordLadder;
 	Node currNode(wordLadder);
 	string fromWord = wordLadder[wordLadder.size()-1];
+	// [TODO: Remove these debug print statements when no longer needed.]
+	std::cout << "Visted words size = " << visitedWords->size() << std::endl;
+	std::cout << "Expanding child nodes and pushing to queue..." << std::endl;
 	// Load up the queue with all word ladders of all the words
 	// which differ from the start word by one letter.
 	for (string childWord : getAllValidChildWords(fromWord, destWord)) {
 			currWordLadder.push_back(childWord);
 			currNode.words = currWordLadder;
-			if (!visitedWords.count(childWord)) {
+			if (visitedWords->count(childWord) == 0) {
 					q.push(currNode);
+					std::cout << "Pushing current node to queue: ";
+					for (string word : currNode.words) {
+						std::cout << word << " ";
+					}
+					std::cout << std::endl;
 					if (childWord == destWord) {
 						 break;
 					}
-					visitedWords.insert(childWord);
+					visitedWords->insert(childWord);
 			}
 			currWordLadder = wordLadder;
 	}
