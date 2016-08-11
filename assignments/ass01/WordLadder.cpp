@@ -11,6 +11,9 @@
 #include <vector>
 #include <iostream>
 #include <set>
+#include <algorithm>
+
+#include <fstream>
 
 class Node {
 	public:
@@ -18,13 +21,21 @@ class Node {
 		Node(vector<std::string> wl);
 };
 
-vector<std::string> getAllValidChildWords(std::string word, std::string destWord);
 void pushChildWordsToQueue(vector<std::string> wordLadder, std::string destWord,
-													 std::set<string> *visitedWords, queue<Node> *q);
+													 Lexicon *english, Lexicon *visitedWords, queue<Node> *q,
+												   unsigned int* lastIndexModified);
+
+vector<std::string> getAllValidChildWords(std::string word,
+	       																	std::string destWord, Lexicon *english,
+																				  unsigned int* lastIndexModified);
+// [TODO: To remove.]
+// bool sortWordLadder(const vector<std::string>& vec1,
+// 										const vector<std::string>& vec2);
 
 Node::Node (vector<string> wl) {
 	words = wl;
 }
+
 int main() {
 
 	std::string startWord, destWord;
@@ -35,51 +46,63 @@ int main() {
 
 	// Optimisation: Store all the words already traversed in an earlier ladder
 	// in a set and don't expand words already expanded.
-	std::set<std::string> visitedWords;
+	Lexicon visitedWords;
+	Lexicon english("EnglishWords.dat");
+
 	// Mark start word as visited.
-	visitedWords.insert(startWord);
+	visitedWords.add(startWord);
+	unsigned int lastIndexModified = -1;
 
 	// Create a queue for BFS.
 	queue<Node> q;
 	vector<std::string> startWordLadder{startWord};
 	Node n(startWordLadder);
-  pushChildWordsToQueue(startWordLadder, destWord,  &visitedWords, &q);
+  pushChildWordsToQueue(startWordLadder, destWord, &english,
+		 										&visitedWords, &q, &lastIndexModified);
 
-	// Store optimal nodes that have reached the destination word in their
-	// word ladder and length of shortest path word ladders.
-  vector<Node> optimalNodes;
-	unsigned int shortestPathLength = 0;
+	// Store optimal word ladders that have reached the destination word
+	// and the length of the shortest path word ladders.
+  vector<vector<std::string>> optimalWordLadders;
+	unsigned int shortestPathLength = -1;
 
 	// Commence BFS for destination word.
 	while (!q.empty()) {
 		// Dequeue node and remove from the queue.
 		n = q.front();
 		q.pop();
-
+		std::cout << "Popping node off queue, current word ladder is: ";
+		for (std::string word : n.words) {
+			std::cout << word << " ";
+		}
+		std::cout << std::endl;
 		// Early exit
-		if (!optimalNodes.empty() && n.words.size() >= shortestPathLength) {
+		if (!optimalWordLadders.empty() && n.words.size() > shortestPathLength
+				&& shortestPathLength != -1) {
 			break;
 		} else {
 			// If destination word has been reached, push node onto
 			// optimal nodes queue.
 			if (n.words[n.words.size()-1] == destWord) {
 				shortestPathLength = n.words.size();
-				optimalNodes.push_back(n);
+				optimalWordLadders.push_back(n.words);
 			}
 			// Get all child nodes to current node, that is all nodes which continue
 			// the word ladder.
-			pushChildWordsToQueue(n.words, destWord, &visitedWords, &q);
+			pushChildWordsToQueue(n.words, destWord, &english, &visitedWords, &q, &lastIndexModified);
 		}
 	}
-  std::cout << "queue size: " << q.size() << std::endl;
 
-	if (optimalNodes.empty()) {
+	// Sort all optimal word ladders to print them in alphabetical order in terms
+	// of traversal through the word ladder.
+  std::sort(optimalWordLadders.begin(), optimalWordLadders.end());
+
+	if (optimalWordLadders.empty()) {
 		std::cout << "No ladder found." << std::endl;
 	} else {
 		// Print found optimal nodes
 		std::cout << "Found ladder: ";
-		for (Node n : optimalNodes) {
-			for (std::string word : n.words) {
+		for (vector<std::string> v : optimalWordLadders) {
+			for (std::string word : v) {
 				std::cout << word << " ";
 			}
 			std::cout << std::endl;
@@ -88,33 +111,52 @@ int main() {
 	return 0;
 }
 
+// [TODO: To remove this block when no longer needed.]
+// bool sortWordLadder(const vector<std::string>& vec1, const vector<std::string>& vec2){
+//     for(size_t i = 0; i < vec1.size() && i < vec2.size(); i++){
+//          if(vec1[i] > vec2[i]){
+//              return false;
+//          } else if(vec1[i] < vec2[i]){
+//              return true;
+//          }
+//     }
+//     return false;
+// }
+
 void pushChildWordsToQueue(vector<std::string> wordLadder, std::string destWord,
-													 std::set<std::string> *visitedWords, queue<Node> *q) {
+													 Lexicon *english, Lexicon *visitedWords, queue<Node> *q,
+												   unsigned int* lastIndexModified) {
   vector<std::string> currWordLadder = wordLadder;
 	Node currNode(wordLadder);
 	std::string fromWord = wordLadder[wordLadder.size()-1];
 	// [TODO: Remove these debug print statements when no longer needed.]
 	std::cout << "Visted words size = " << visitedWords->size() << std::endl;
 	std::cout << "Expanding child nodes and pushing to queue..." << std::endl;
+	if (wordLadder.at(wordLadder.size() - 1) == "cot") {
+		std::cout << "we're at cot!! here are the valid child words: " << std::endl;
+		for (std::string s : getAllValidChildWords(fromWord, destWord, english, lastIndexModified)) {
+			std::cout << s << " ";
+		}
+		std::cout << std::endl;
+	}
 	// Load up the queue with all word ladders of all the words
 	// which differ from the start word by one letter.
-	for (std::string childWord : getAllValidChildWords(fromWord, destWord)) {
+	for (std::string childWord : getAllValidChildWords(fromWord, destWord, english, lastIndexModified)) {
 			currWordLadder.push_back(childWord);
 			currNode.words = currWordLadder;
-			if (visitedWords->count(childWord) == 0) {
+			if (!visitedWords->containsWord(childWord) || childWord == destWord) {
 				  std::cout << "Word to be pushed to the end of the current word ladder: "
-					<< childWord << " has been visited " << visitedWords->count(childWord)
-					<< std::endl;
+					<< childWord << std::endl;
 					q->push(currNode);
 					std::cout << "Pushing current node to queue: ";
 					for (string word : currNode.words) {
 						std::cout << word << " ";
 					}
 					std::cout << std::endl;
-					visitedWords->insert(childWord);
-					if (childWord == destWord) {
-						 break;
-					}
+					visitedWords->add(childWord);
+			}
+			if (childWord == destWord) {
+				 break;
 			}
 			currWordLadder = wordLadder;
 	}
@@ -128,8 +170,10 @@ void pushChildWordsToQueue(vector<std::string> wordLadder, std::string destWord,
  * which are only one letter different fom the given word
  * and is a real English word.
  */
-vector<std::string> getAllValidChildWords(std::string word, std::string destWord) {
-	Lexicon english("EnglishWords.dat");
+vector<std::string> getAllValidChildWords(std::string word,
+	 																				std::string destWord,
+																					Lexicon *english,
+																					unsigned int* lastIndexModified) {
 	// Lexicon english("SmallDictionary.txt");
 	vector<std::string> result;
 	char c0, destC;
@@ -156,8 +200,9 @@ vector<std::string> getAllValidChildWords(std::string word, std::string destWord
 				 if (c1 != c0) {
 					 newWord[i] = c1;
 				 }
-				 if (english.containsWord(newWord)) {
+				 if (english->containsWord(newWord)) {
 					 result.push_back(newWord);
+					 *lastIndexModified = i;
 					//  std::cout << newWord << std::endl;
 				 }
 		 }
