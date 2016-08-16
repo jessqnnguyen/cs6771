@@ -1,0 +1,34 @@
+1. What are the default initialisation rules for C++ variables? Consider the
+   following code fragment:
+
+   std::string s1;
+   int i1;
+
+   int main() {
+     std::string s2;
+     int i2;
+     ...
+     return 0;
+   }
+What are the initial values of s1, i1, s2 and i2?
+NB. You should always initialise variables when they are defined.
+--------------------------------------------------------------------------------
+s2 is the empty string and i1 and i2 will have whatever garbage values were there
+last time that memory was used.
+Tip - always initialise variables!
+
+2. What is the output of the following program?
+
+#include <iostream>
+
+int i;
+
+int f() { return i++; }
+int g() { return i == 1 ? i + 3 : i - 1; }
+int h() { return i == 2 ? i - 3 : i + 2; }
+
+int main() {
+  std::cout << f() + g() * h() << std::endl;
+}
+What will be the output of an equivalent C program? What about in Java?
+--------------------------------------------------------------------------------
