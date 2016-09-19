@@ -4,7 +4,6 @@ Graph<N,E>::Graph(const Graph& g) : it(g.it) {
   edges.clear();
   for (const auto node : g.nodes) {
     Node n(*node);
-    // std::cout << "curr node being copied is" << n.getData() << " and has edge count=" << n.getEdgeCount() << "\n";
     nodes.push_back(std::make_shared<Node>(n));
   }
   for (const auto edge : g.edges) {
@@ -20,7 +19,6 @@ Graph<N,E>::Graph(Graph&& g) {
   edges.clear();
   for (const auto node : g.nodes) {
     Node n = std::move(*node);
-    // std::cout << "curr node being copied is" << n.getData() << " and has edge count=" << n.getEdgeCount() << "\n";
     nodes.push_back(std::make_shared<Node>(n));
   }
   for (const auto edge : g.edges) {
@@ -37,7 +35,6 @@ Graph<N,E>& Graph<N,E>::operator=(Graph&& g) {
   edges.clear();
   for (const auto node : g.nodes) {
     Node n = std::move(*node);
-    // std::cout << "curr node being copied is" << n.getData() << " and has edge count=" << n.getEdgeCount() << "\n";
     nodes.push_back(std::make_shared<Node>(n));
   }
   for (const auto edge : g.edges) {
@@ -54,7 +51,6 @@ Graph<N,E>& Graph<N,E>::operator=(const Graph& g) {
   edges.clear();
   for (const auto node : g.nodes) {
     Node n(*node);
-    // std::cout << "curr node being copied is" << n.getData() << " and has edge count=" << n.getEdgeCount() << "\n";
     nodes.push_back(std::make_shared<Node>(n));
   }
   for (const auto edge : g.edges) {
@@ -64,10 +60,6 @@ Graph<N,E>& Graph<N,E>::operator=(const Graph& g) {
   it = g.it;
   return *this;
 }
-//
-// template <typename N, typename E>
-// Graph<N, E>::Graph(Graph &&g) : nodes{std::move(g.nodes)}, edges{std::move(g.edges)},
-//                                       it{std::move(g.it)} {}
 
 template <typename N, typename E>
 bool Graph<N, E>::addNode(const N& val) {
@@ -153,10 +145,60 @@ bool Graph<N, E>::replace(const N& oldData, const N& newData) {
 }
 
 template <typename N, typename E>
+void Graph<N,E>::mergeReplace(const N& oldData, const N& newData) {
+  // Check that nodes containing the old data and new data exists.
+  if (!isNode(oldData) || !isNode(newData)) {
+    throw std::runtime_error("Nodes were not found!");
+  } else {
+    // Loop through all the edges which are outgoing from the old node
+    // and reroute them to new node.
+    // Keep track of how many edges were rerouted to update the new node's
+    // edge count.
+    int edgesMovedCount = 0;
+    for (auto edge : edges) {
+      if (edge->getSrc() == oldData && !edgeExists(newData, edge->getDest(), edge->getWeight())) {
+        edge->setSrc(newData);
+      } else if (edge->getDest() == oldData && !edgeExists(edge->getSrc(), newData, edge->getWeight())) {
+        edge->setDest(newData);
+      }
+      // Check it's not an edge moved to itself, i.e. from newData -> newData
+      if (edge->getSrc() != newData && edge->getDest() != newData) {
+        ++edgesMovedCount;
+      }
+    }
+    deleteNode(oldData);
+  }
+}
+
+
+/**
+ * A helper function
+ * ----------------------------------------
+ * Usage: edgeExists(src, dst, weight)
+ * Slightly different from isConnected, given src, dst and weight values
+ * checks if an edge exists with those values in the graph already.
+ */
+template <typename N, typename E>
+bool Graph<N,E>::edgeExists(const N& src, const N& dst, const E weight) const {
+  bool edgeExists = false;
+  // Check src and dst nodes exist.
+  if (!isNode(src) && !isNode(dst)) {
+      throw std::runtime_error("Source or destination node does not exist!");
+  } else {
+    for (const auto edge : edges) {
+      if (edge->getSrc() == src && edge->getDest() == dst
+          && edge->getWeight() == weight) {
+          edgeExists = true;
+      }
+    }
+  }
+  return edgeExists;
+}
+
+template <typename N, typename E>
 void Graph<N,E>::deleteNode(const N& val) noexcept {
   // Check if given node exists.
   if (isNode(val)) {
-    int indexToRemove = 0;
     // Find node with the given val and delete.
     for (auto node : nodes) {
       if (node->getData() == val) {
@@ -165,13 +207,7 @@ void Graph<N,E>::deleteNode(const N& val) noexcept {
         node.reset();
         break;
       }
-      indexToRemove++;
     }
-    // if (indexToRemove != 0) {
-    //   nodes.erase(nodes.begin() + (indexToRemove - 1));
-    // } else {
-    //   nodes.erase(nodes.begin());
-    // }
     nodes.erase(std::remove_if(nodes.begin(), nodes.end(), [val] (std::shared_ptr<Node> &n) {
                     return n->getData() == val;
                 }), nodes.end());
@@ -184,29 +220,7 @@ void Graph<N,E>::deleteNode(const N& val) noexcept {
     for (const auto edge : edgesToDelete) {
       deleteEdge(edge->getSrc(), edge->getDest(), edge->getWeight());
     }
-    // edges.erase(std::remove_if(edges.begin(), edges.end(),
-                            // [val] (std::shared_ptr<Edge> &e) {
-                              // return e->getSrc() == val || e->getDest() == val;
-                            // }), edges.end());
-    // Now loop through edges and check for any edges that have the given val
-    // as the source or destination node. If so, remove that edge and also
-    // decrement the edge count.
-    // std::map<N, int> nodesToUpdate;
-    // for (auto edge : edges) {
-    //   if (edge->getDest() == val || edge->getSrc() == val) {
-    //     deleteEdge(edge->getSrc(), edge->getDest(), edge->getWeight());
-    //   }
-    // }
-    // for (const auto entry : nodesToUpdate) {
-    //   for (auto node : nodes) {
-    //     if (node->getData() == entry.first()) {
-    //       node->setEdgeCount
-    //     }
-    //   }
-    // }
-
   }
-  // printNodes();
 }
 
 // Prints the data stored in all the nodes in the graph,
@@ -233,29 +247,6 @@ void Graph<N, E>::printNodes() const {
 
 template <typename N, typename E>
 void Graph<N,E>::deleteEdge(const N& src, const N& dst, const E& w) noexcept {
-  // std::cout << "deleting edge at " << src << " to " << dst << " with weight " << w << "\n";
-  // Check edge exists.
-  // if (isConnected(src, dst)) {
-    // std::cout << src << "-" << dst << " is connected\n";
-    // int indexToRemove = 0;
-    // for (auto edge : edges) {
-    //   if (edge->getSrc() == src && edge->getDest() == dst && edge->getWeight() == w) {
-    //     edge->getSrcPtr().reset();
-    //     edge->getDestPtr().reset();
-    //     edge->getWeightPtr().reset();
-    //     edge.reset();
-    //     break;
-    //   }
-    //   indexToRemove++;
-    // }
-    // std::cout << "index to remove is " << indexToRemove << "\n";
-    // edges.erase(edges.begin() + indexToRemove);
-    // printEdges(src);
-    // if (indexToRemove != 0) {
-    //   edges.erase(edges.begin() + (indexToRemove - 1));
-    // } else {
-    //   edges.erase(edges.begin());
-    // }
     edges.erase(std::remove_if(edges.begin(), edges.end(),
                             [src, dst, w] (std::shared_ptr<Edge> &e) {
                               bool result = false;
@@ -270,30 +261,13 @@ void Graph<N,E>::deleteEdge(const N& src, const N& dst, const E& w) noexcept {
                               }
                               return result;
                             }), edges.end());
-    // printEdges(src);
-    // edges.erase(std::remove_if(edges.begin(), edges.end(),
-    //                         [] (std::shared_ptr<Edge> &e) {
-    //                           return (!e);
-    //                         }), edges.end());
-
-    // std::cout << "edge at " << src << " to " << dst << " with weight " << w << "was deleted\n";
-    // printEdges(src);
 
     // Update edge count of src node.
     for (auto node : nodes) {
-      // if (node->getData() == "a") {
-      //   std::cout << "edge count of a= " << node->getEdgeCount() << "\n";
-      // }
       if (node->getData() == src) {
-        // std::cout << node->getData() << " node's edge count is before deleting now: " << node->getEdgeCount() << "\n";
         node->setEdgeCount(node->getEdgeCount() - 1);
-        // std::cout << "removing edge at " << src << " to " << dst << "\n";
-        // std::cout << node->getData() << " node's edge count is now " << node->getEdgeCount() << "\n";
       }
     }
-    // printEdges(src);
-
-  // }
 }
 
 template <typename N, typename E>
@@ -330,11 +304,6 @@ void Graph<N, E>::clear() noexcept {
 
 template <typename N, typename E>
 void Graph<N, E>::printEdges(const N& val) const {
-  // std::cout << "printEdges(" << val << ") ran \n";
-  // Check node exists.
-  // if (isNode(val)) {
-    // std::cout << val << " node exists! this print should run..\n";
-  // }
   if (!isNode(val)) {
     throw std::runtime_error("Node does not exist!");
   } else {
@@ -399,28 +368,5 @@ void Graph<N, E>::next() const {
 template <typename N, typename E>
 const N& Graph<N, E>::value() const {
   std::shared_ptr<Node> n = *it;
-  // std::cout << "n:" << n->getData() << "\n";
   return n->getData();
 }
-
-
-// [TODO: Print edges function, mergeReplace, test with other test files
-//  on deleting functions etc]
-
-/**
- * Helper function
- * ----------------------------------------
- * Usage: findNode(val)
- * Given a value, finds the corresponding node in the graph for it.
- * Returns a null pointer if no node found.
- */
-// template <typename Node, typename N, typename E>
-// template <typename N, typename E>
-// std::shared_ptr<Node> Graph<N, E>::findNode(const N& val) {
-//   std::shared_ptr<Node> foundNode;
-//   for (auto const node : nodes) {
-//     if (node.data == val) {
-//       foundNode = node;
-//     }
-//   }
-// }

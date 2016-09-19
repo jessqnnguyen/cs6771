@@ -10,6 +10,7 @@ namespace gdwg {
    class Graph {
    public:
      Graph() : it(0) {}
+
      // Copy constructor.
      Graph(const Graph& g);
 
@@ -33,6 +34,7 @@ namespace gdwg {
      bool isConnected(const N& src, const N& dst) const;
      void clear() noexcept;
      void printEdges(const N& val) const;
+     bool edgeExists(const N& src, const N& dst, const E weight) const;
 
      // Internal iterators.
      void begin() const;
@@ -73,6 +75,8 @@ namespace gdwg {
             const E weight) :
             src{std::make_shared<N>(src)}, dest{std::make_shared<N>(dest)},
             weight{std::make_shared<E>(weight)} {}
+       void setSrc(const N& val) { *src = val; }
+       void setDest(const N& val) { *dest = val; }
        N& getSrc() const { return *src; }
        N& getDest() const { return *dest; }
        E& getWeight() const { return *weight; }
