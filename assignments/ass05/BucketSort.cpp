@@ -5,33 +5,6 @@
 #include <thread>
 #include <iostream>
 
-// bool aLessB(const unsigned int& x, const unsigned int& y, unsigned int pow) {
-//   if (x == y) return false; // if the two numbers are the same then one is not less than the other
-//   unsigned int a = x;
-//   unsigned int b = y;
-//   // work out the digit we are currently comparing on.
-//   if (pow == 0) {
-//           while (a / 10 > 0) {
-//                   a = a / 10;
-//           }
-//           while (b / 10 > 0) {
-//                   b = b / 10;
-//           }
-//   } else {
-//   	while (a / 10 >= (unsigned int) std::round(std::pow(10,pow))) {
-//       a = a / 10;
-//     }
-//     while (b / 10 >= (unsigned int) std::round(std::pow(10,pow))) {
-//       b = b / 10;
-//     }
-//   }
-//   if (a == b) {
-//     return aLessB(x,y,pow + 1);  // recurse if this digit is the same
-//   } else {
-//     return a < b;
-//   }
-// }
-
 bool aLessB(const unsigned int& x, const unsigned int& y, unsigned int pow) {
   std::string s1 = std::to_string(x);
   std::string s2 = std::to_string(y);
@@ -40,37 +13,6 @@ bool aLessB(const unsigned int& x, const unsigned int& y, unsigned int pow) {
   } else {
     return s1[pow] < s2[pow];
   }
-}
-
-std::vector<unsigned int> recursiveBucketSort(unsigned int digit, std::vector<unsigned int>& numbers) {
-  auto get_digit = [&](unsigned int num, unsigned int digit) {
-    std::vector<unsigned int> digits;
-    while (num) {
-      digits.push_back(num % 10);
-      num /= 10;
-    }
-    std::reverse(digits.begin(), digits.end());
-    if (!digits.at(digit)) {
-      return (unsigned int) 0;
-    }
-    return digits.at(digit);
-  };
-  std::vector<std::vector<unsigned int>> tempBuckets(10);
-
-  for (unsigned int i = 0; i < numbers.size(); ++i) {
-      unsigned int currNum = numbers[i];
-      tempBuckets[get_digit(currNum, digit)].push_back(currNum);
-  }
-  std::vector<unsigned int> sortedNumbers;
-  for (auto& bucket : tempBuckets) {
-    if (bucket.size() > 1) {
-      bucket = recursiveBucketSort(digit + 1, bucket);
-    }
-    for (auto& number : bucket) {
-      sortedNumbers.push_back(number);
-    }
-  }
-  return sortedNumbers;
 }
 
 // Helper function for mutex access to a resource by using std::lock_guard.
@@ -205,12 +147,10 @@ void BucketSort::sort(unsigned int numCores) {
        // end points calculated.
        for (unsigned int i = startPos; i <= endPos; ++i) {
          std::vector<unsigned int> currBucket = radixBuckets.at(i);
-         currBucket = recursiveBucketSort(1, currBucket);
-        //  std::sort(currBucket.begin(), currBucket.end(),
-        //         [](const unsigned int& x, const unsigned int& y){
-         //
-        //           return aLessB(x, y, 0);
-        //         });
+         std::sort(currBucket.begin(), currBucket.end(),
+                [](const unsigned int& x, const unsigned int& y) {
+                  return aLessB(x, y, 0);
+                });
 
          // Write operation to shared resource - radixBuckets vector. Lock until
          // write process is complete.
